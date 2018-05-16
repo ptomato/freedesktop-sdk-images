@@ -1,0 +1,2886 @@
+{
+    "build-runtime": true,
+    "id": "org.freedesktop.Sdk",
+    "id-platform": "org.freedesktop.Platform",
+    "branch": "1.6",
+    "runtime": "org.freedesktop.BasePlatform",
+    "sdk": "org.freedesktop.BaseSdk",
+    "runtime-version": "1.6",
+    "sdk-extensions": [],
+    "add-extensions": {
+        "org.freedesktop.Platform.GL": {
+            "versions": "1.6;1.4",
+            "version": "1.4",
+            "directory": "lib/GL",
+            "subdirectories": true,
+            "no-autodownload": true,
+            "autodelete": false,
+            "add-ld-path": "lib",
+            "merge-dirs": "vulkan/icd.d;glvnd/egl_vendor.d;OpenCL/vendors",
+            "download-if": "active-gl-driver",
+            "enable-if": "active-gl-driver"
+        },
+        "org.freedesktop.Platform.Timezones" : {
+            "directory": "share/zoneinfo"
+        },
+        "org.freedesktop.Platform.GStreamer" : {
+            "directory": "lib/extensions/gstreamer-1.0",
+            "subdirectories": true
+        },
+        "org.freedesktop.Platform.Icontheme" : {
+            "directory": "share/runtime/share/icons",
+            "subdirectories": true,
+            "no-autodownload": true,
+            "version": "1.0"
+        },
+        "org.gtk.Gtk3theme" : {
+            "directory": "share/runtime/share/themes",
+            "subdirectories": true,
+            "subdirectory-suffix": "gtk-3.0",
+            "no-autodownload": true,
+            "version": "3.22",
+            "download-if": "active-gtk-theme"
+        },
+        "org.freedesktop.Platform.ffmpeg" : {
+            "directory": "lib/ffmpeg",
+            "add-ld-path": "lib"
+        },
+        "org.freedesktop.Sdk.Extension" : {
+            "subdirectories": true,
+            "directory": "lib/sdk",
+            "no-autodownload": true
+        },
+        "org.freedesktop.Platform.VAAPI.Intel" : {
+            "directory": "lib/dri/intel-vaapi-driver",
+            "autodelete": false,
+            "no-autodownload": true,
+            "download-if": "have-intel-gpu"
+        },
+        "org.freedesktop.Sdk.Docs" : {
+            "directory": "share/runtime/docs",
+            "bundle": true,
+            "autodelete": true,
+            "no-autodownload": true
+        }
+    },
+    "finish-args": [
+        "--env=GI_TYPELIB_PATH=/app/lib/girepository-1.0",
+        "--env=GST_PLUGIN_SYSTEM_PATH=/app/lib/gstreamer-1.0:/usr/lib/extensions/gstreamer-1.0:/usr/lib/gstreamer-1.0",
+        "--env=XDG_DATA_DIRS=/app/share:/usr/share:/usr/share/runtime/share:/run/host/share",
+        "--sdk=org.freedesktop.Sdk//1.6",
+        "--runtime=org.freedesktop.Platform//1.6"
+    ],
+    "cleanup": [ "/share/doc",
+                 "/lib/systemd",
+                 "/lib/opkg",
+                 "*.la", "*.a"],
+    "cleanup-commands": [ "for i in /usr/lib/*.a; do cp $i $i.tmp; strip -g $i.tmp; mv $i.tmp $i; done",
+                          "mkdir -p /usr/lib/sdk",
+                          "mkdir -p /usr/lib/GL",
+                          "mkdir -p /usr/lib/debug",
+                          "mkdir -p /usr/lib/ffmpeg",
+                          "ln -s /app/lib/debug /usr/lib/debug/app",
+                          "ln -s ../../run/ /usr/lib/extensions",
+                          /* We need this in the platform cleanup-commands */
+                          "cp /usr/bin/chrpath /usr/bin/chrpath.platform",
+                          "/usr/libexec/freedesktop-post.sh"
+                        ],
+    "cleanup-platform": [ "/share/runtime/docs",
+                          "/include",
+                          "/share/aclocal",
+                          "/share/pkgconfig",
+                          "/lib/pkgconfig",
+                          "/lib/cmake",
+                          "/share/vala",
+                          "/share/gir-1.0",
+                          "/lib/python*/test"
+                        ],
+    "cleanup-platform-commands": [ "rm /usr/lib/*.a",
+                                   /* Make sure pulseaudio is relocatable for the 32bit extension */
+                                   "for F in /usr/lib/libpulse*.so; do real=\"$(readlink -f \"${F}\")\" && cp -ip \"${real}\" \"${real}\".tmp && mv \"${real}\".tmp \"${real}\" && chrpath.platform -r '$ORIGIN/pulseaudio' \"${real}\"; done",
+                                   /* Now drop it */
+                                   "rm /usr/bin/chrpath.platform",
+                                   /* Work around gst-python issue */
+                                   "ln -s libpython2.7.so.1.0 /usr/lib/libpython2.7.so",
+                                   "ln -s libpython3.5m.so.1.0 /usr/lib/libpython3.5m.so",
+                                   "/usr/libexec/freedesktop-post.sh"
+                                 ],
+    "build-options" : {
+        "cflags": "-O2 -g -fstack-protector-strong -D_FORTIFY_SOURCE=2",
+        "cxxflags": "-O2 -g -fstack-protector-strong -D_FORTIFY_SOURCE=2",
+        "ldflags": "-fstack-protector-strong -Wl,-z,relro,-z,now",
+        "env": {
+            "V": "1"
+        }
+    },
+    "modules": [
+        {
+            "name": "autoconf-archive",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "http://ftp.acc.umu.se/mirror/gnu.org/gnu/autoconf-archive/autoconf-archive-2016.09.16.tar.xz",
+                    "sha256": "e8f2efd235f842bad2f6938bf4a72240a5e5fcd248e8444335e63beb60fabd82"
+                }
+            ]
+        },
+        {
+            "name": "meson",
+            "buildsystem": "simple",
+            "build-commands": [
+                "python3 setup.py  install"
+            ],
+            "cleanup-platform": ["*"],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/mesonbuild/meson/releases/download/0.46.0/meson-0.46.0.tar.gz",
+                    "sha256": "b7df91b01a358a8facdbfa33596a47cda38a760435ab55e1985c0bff06a9cbf0"
+                },
+                {
+                    "type": "patch",
+                    "path": "meson-no-lib64.patch"
+                }
+            ]
+        },
+        {
+            "name": "xorg-x11-util-macros",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/util/util-macros-1.19.1.tar.bz2",
+                     "sha256": "18d459400558f4ea99527bc9786c033965a3db45bf4c6a32eefdc07aa9e306a6"
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-bigreqs",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/bigreqsproto-1.1.2.tar.bz2",
+                     "sha256": "462116ab44e41d8121bfde947321950370b285a5316612b8fce8334d50751b1e"
+                 },
+                 {
+                     "type": "shell",
+                     "commands": [
+			 "cp /usr/share/gnu-config/config.sub .",
+			 "cp /usr/share/gnu-config/config.guess ."
+		     ]
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-composite",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/compositeproto-0.4.2.tar.bz2",
+                     "sha256": "049359f0be0b2b984a8149c966dd04e8c58e6eade2a4a309cf1126635ccd0cfc"
+                 },
+                 {
+                     "type": "shell",
+                     "commands": [
+			 "cp /usr/share/gnu-config/config.sub .",
+			 "cp /usr/share/gnu-config/config.guess ."
+		     ]
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-damage",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/damageproto-1.2.1.tar.bz2",
+                     "sha256": "5c7c112e9b9ea8a9d5b019e5f17d481ae20f766cb7a4648360e7c1b46fc9fc5b"
+                 },
+                 {
+                     "type": "shell",
+                     "commands": [
+			 "cp /usr/share/gnu-config/config.sub .",
+			 "cp /usr/share/gnu-config/config.guess ."
+		     ]
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-dmx",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/dmxproto-2.3.1.tar.bz2",
+                     "sha256": "e72051e6a3e06b236d19eed56368117b745ca1e1a27bdc50fd51aa375bea6509"
+                 },
+                 {
+                     "type": "shell",
+                     "commands": [
+			 "cp /usr/share/gnu-config/config.sub .",
+			 "cp /usr/share/gnu-config/config.guess ."
+		     ]
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-evieext",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/evieext-1.1.1.tar.bz2",
+                     "sha256": "1cf74114436d99f56577a90b6438a32ba31b8128c9e63842bb179aba592733fe"
+                 },
+                 {
+                     "type": "shell",
+                     "commands": [
+			 "cp /usr/share/gnu-config/config.sub .",
+			 "cp /usr/share/gnu-config/config.guess ."
+		     ]
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-fixes",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/fixesproto-5.0.tar.bz2",
+                     "sha256": "ba2f3f31246bdd3f2a0acf8bd3b09ba99cab965c7fb2c2c92b7dc72870e424ce"
+                 },
+                 {
+                     "type": "shell",
+                     "commands": [
+			 "cp /usr/share/gnu-config/config.sub .",
+			 "cp /usr/share/gnu-config/config.guess ."
+		     ]
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-fonts",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/fontsproto-2.1.3.tar.bz2",
+                     "sha256": "259046b0dd9130825c4a4c479ba3591d6d0f17a33f54e294b56478729a6e5ab8"
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-gl",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/glproto-1.4.17.tar.bz2",
+                     "sha256": "adaa94bded310a2bfcbb9deb4d751d965fcfe6fb3a2f6d242e2df2d6589dbe40"
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-input",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/inputproto-2.3.2.tar.bz2",
+                     "sha256": "893a6af55733262058a27b38eeb1edc733669f01d404e8581b167f03c03ef31d"
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-kb",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/kbproto-1.0.7.tar.bz2",
+                     "sha256": "f882210b76376e3fa006b11dbd890e56ec0942bc56e65d1249ff4af86f90b857"
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-randr",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/randrproto-1.5.0.tar.bz2",
+                     "sha256": "4c675533e79cd730997d232c8894b6692174dce58d3e207021b8f860be498468"
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-record",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/recordproto-1.14.2.tar.bz2",
+                     "sha256": "a777548d2e92aa259f1528de3c4a36d15e07a4650d0976573a8e2ff5437e7370"
+                 },
+                 {
+                     "type": "shell",
+                     "commands": [
+			 "cp /usr/share/gnu-config/config.sub .",
+			 "cp /usr/share/gnu-config/config.guess ."
+		     ]
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-render",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/renderproto-0.11.1.tar.bz2",
+                     "sha256": "06735a5b92b20759204e4751ecd6064a2ad8a6246bb65b3078b862a00def2537"
+                 },
+                 {
+                     "type": "shell",
+                     "commands": [
+			 "cp /usr/share/gnu-config/config.sub .",
+			 "cp /usr/share/gnu-config/config.guess ."
+		     ]
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-resource",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/resourceproto-1.2.0.tar.bz2",
+                     "sha256": "3c66003a6bdeb0f70932a9ed3cf57cc554234154378d301e0c5cfa189d8f6818"
+                 },
+                 {
+                     "type": "shell",
+                     "commands": [
+			 "cp /usr/share/gnu-config/config.sub .",
+			 "cp /usr/share/gnu-config/config.guess ."
+		     ]
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-scrnsaver",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/scrnsaverproto-1.2.2.tar.bz2",
+                     "sha256": "8bb70a8da164930cceaeb4c74180291660533ad3cc45377b30a795d1b85bcd65"
+                 },
+                 {
+                     "type": "shell",
+                     "commands": [
+			 "cp /usr/share/gnu-config/config.sub .",
+			 "cp /usr/share/gnu-config/config.guess ."
+		     ]
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-video",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/videoproto-2.3.3.tar.bz2",
+                     "sha256": "c7803889fd08e6fcaf7b68cc394fb038b2325d1f315e571a6954577e07cca702"
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-xcmisc",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/xcmiscproto-1.2.2.tar.bz2",
+                     "sha256": "b13236869372256c36db79ae39d54214172677fb79e9cdc555dceec80bd9d2df"
+                 },
+                 {
+                     "type": "shell",
+                     "commands": [
+			 "cp /usr/share/gnu-config/config.sub .",
+			 "cp /usr/share/gnu-config/config.guess ."
+		     ]
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-xext",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/xextproto-7.3.0.tar.bz2",
+                     "sha256": "f3f4b23ac8db9c3a9e0d8edb591713f3d70ef9c3b175970dd8823dfc92aa5bb0"
+                 },
+                 {
+                     "type": "shell",
+                     "commands": [
+			 "cp /usr/share/gnu-config/config.sub .",
+			 "cp /usr/share/gnu-config/config.guess ."
+		     ]
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-xf86bigfont",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/xf86bigfontproto-1.2.0.tar.bz2",
+                     "sha256": "ba9220e2c4475f5ed2ddaa7287426b30089e4d29bd58d35fad57ba5ea43e1648"
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-xf86dga",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/xf86dgaproto-2.1.tar.bz2",
+                     "sha256": "ac5ef65108e1f2146286e53080975683dae49fc94680042e04bd1e2010e99050"
+                 },
+                 {
+                     "type": "shell",
+                     "commands": [
+			 "cp /usr/share/gnu-config/config.sub .",
+			 "cp /usr/share/gnu-config/config.guess ."
+		     ]
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-xf86dri",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/xf86driproto-2.1.1.tar.bz2",
+                     "sha256": "9c4b8d7221cb6dc4309269ccc008a22753698ae9245a398a59df35f1404d661f"
+                 },
+                 {
+                     "type": "shell",
+                     "commands": [
+			 "cp /usr/share/gnu-config/config.sub .",
+			 "cp /usr/share/gnu-config/config.guess ."
+		     ]
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-xf86misc",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/xf86miscproto-0.9.3.tar.bz2",
+                     "sha256": "45b8ec6a4a8ca21066dce117e09dcc88539862e616e60fb391de05b36f63b095"
+                 },
+                 {
+                     "type": "shell",
+                     "commands": [
+			 "cp /usr/share/gnu-config/config.sub .",
+			 "cp /usr/share/gnu-config/config.guess ."
+		     ]
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-xf86vidmode",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/xf86vidmodeproto-2.3.1.tar.bz2",
+                     "sha256": "45d9499aa7b73203fd6b3505b0259624afed5c16b941bd04fcf123e5de698770"
+                 },
+                 {
+                     "type": "shell",
+                     "commands": [
+			 "cp /usr/share/gnu-config/config.sub .",
+			 "cp /usr/share/gnu-config/config.guess ."
+		     ]
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-xinerama",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/xineramaproto-1.2.1.tar.bz2",
+                     "sha256": "977574bb3dc192ecd9c55f59f991ec1dff340be3e31392c95deff423da52485b"
+                 },
+                 {
+                     "type": "shell",
+                     "commands": [
+			 "cp /usr/share/gnu-config/config.sub .",
+			 "cp /usr/share/gnu-config/config.guess ."
+		     ]
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-x",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/xproto-7.0.31.tar.bz2",
+                     "sha256": "c6f9747da0bd3a95f86b17fb8dd5e717c8f3ab7f0ece3ba1b247899ec1ef7747"
+                 },
+                 {
+                     "type": "shell",
+                     "commands": [
+			 "cp /usr/share/gnu-config/config.sub .",
+			 "cp /usr/share/gnu-config/config.guess ."
+		     ]
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-xproxymanagement",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/xproxymanagementprotocol-1.0.3.tar.bz2",
+                     "sha256": "7382acd8c76fa577beb622cab86cc07fafdcecbbd9b4f209bfa72976c4fd26c2"
+                 },
+                 {
+                     "type": "shell",
+                     "commands": [
+			 "cp /usr/share/gnu-config/config.sub .",
+			 "cp /usr/share/gnu-config/config.guess ."
+		     ]
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-dri2",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/dri2proto-2.8.tar.bz2",
+                     "sha256": "f9b55476def44fc7c459b2537d17dbc731e36ed5d416af7ca0b1e2e676f8aa04"
+                 },
+                 {
+                     "type": "shell",
+                     "commands": [
+			 "cp /usr/share/gnu-config/config.sub .",
+			 "cp /usr/share/gnu-config/config.guess ."
+		     ]
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-present",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/presentproto-1.1.tar.bz2",
+                     "sha256": "f69b23a8869f78a5898aaf53938b829c8165e597cda34f06024d43ee1e6d26b9"
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-proto-dri3",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/proto/dri3proto-1.0.tar.bz2",
+                     "sha256": "01be49d70200518b9a6b297131f6cc71f4ea2de17436896af153226a774fc074"
+                 }
+            ]
+        },
+        {
+            "name": "xorg-x11-xtrans-devel",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/xtrans-1.3.5.tar.bz2",
+                     "sha256": "adbd3b36932ce4c062cd10f57d78a156ba98d618bdb6f50664da327502bc8301"
+                 }
+            ]
+        },
+        {
+            "name": "libXau",
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/libXau-1.0.8.tar.bz2",
+                     "sha256": "fdd477320aeb5cdd67272838722d6b7d544887dfe7de46e1e7cc0c27c2bea4f2"
+                 }
+            ]
+        },
+        {
+            "name": "xcb-proto",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xcb.freedesktop.org/dist/xcb-proto-1.12.tar.bz2",
+                     "sha256": "5922aba4c664ab7899a29d92ea91a87aa4c1fc7eb5ee550325c3216c480a4906"
+                 }
+            ]
+        },
+        {
+            "name": "libxcb",
+            "rm-configure": true,
+            /* I'm getting strange python errors with parallel build: EOFError: EOF read where object expected when parsing xml desc */
+            "no-parallel-make": true,
+            "config-opts": [ "--disable-static", "--enable-xkb", "--disable-xprint" ],
+            "post-install": [ "sed 's,@libdir@,/usr/lib,;s,@prefix@,/usr,;s,@exec_prefix@,/usr,' pthread-stubs.pc.in > /usr/lib/pkgconfig/pthread-stubs.pc"],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "http://xcb.freedesktop.org/dist/libxcb-1.12.tar.bz2",
+                    "sha256": "4adfb1b7c67e99bc9c2ccb110b2f175686576d2f792c8a71b9c8b19014057b5b"
+                },
+                {
+                    "type": "file",
+                    "path": "pthread-stubs.pc.in"
+                },
+                {
+                    "type": "patch",
+                    "path": "libxcb-pthread-stub.patch"
+                }
+            ]
+        },
+        {
+            "name": "libXdmcp",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/libXdmcp-1.1.2.tar.bz2",
+                     "sha256": "81fe09867918fff258296e1e1e159f0dc639cb30d201c53519f25ab73af4e4e2"
+                 }
+            ]
+        },
+        {
+            "name": "libX11",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/libX11-1.6.5.tar.bz2",
+                     "sha256": "4d3890db2ba225ba8c55ca63c6409c1ebb078a2806de59fb16342768ae63435d"
+                 }
+            ]
+        },
+        {
+            "name": "libXext",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/libXext-1.3.3.tar.bz2",
+                     "sha256": "b518d4d332231f313371fdefac59e3776f4f0823bcb23cf7c7305bfb57b16e35"
+                 }
+            ]
+        },
+        {
+            "name": "libXv",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/libXv-1.0.11.tar.bz2",
+                     "sha256": "d26c13eac99ac4504c532e8e76a1c8e4bd526471eb8a0a4ff2a88db60cb0b088"
+                 }
+            ]
+        },
+        {
+            "name": "libXfixes",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/libXfixes-5.0.3.tar.bz2",
+                     "sha256": "de1cd33aff226e08cefd0e6759341c2c8e8c9faf8ce9ac6ec38d43e287b22ad6"
+                 }
+            ]
+        },
+        {
+            "name": "libXdamage",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/libXdamage-1.1.4.tar.bz2",
+                     "sha256": "7c3fe7c657e83547f4822bfde30a90d84524efb56365448768409b77f05355ad"
+                 },
+                 {
+                     "type": "shell",
+                     "commands": [
+			 "rm -f config.sub config.guess",
+			 "cp /usr/share/gnu-config/config.sub .",
+			 "cp /usr/share/gnu-config/config.guess ."
+		     ]
+                 }
+            ]
+        },
+        {
+            "name": "libXi",
+            "config-opts": [ "--disable-static", "--disable-specs" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/libXi-1.7.9.tar.bz2",
+                     "sha256": "c2e6b8ff84f9448386c1b5510a5cf5a16d788f76db018194dacdc200180faf45"
+                 }
+            ]
+        },
+        {
+            "name": "libXtst",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/libXtst-1.2.3.tar.bz2",
+                     "sha256": "4655498a1b8e844e3d6f21f3b2c4e2b571effb5fd83199d428a6ba7ea4bf5204"
+                 }
+            ]
+        },
+        {
+            "name": "libICE",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/libICE-1.0.9.tar.bz2",
+                     "sha256": "8f7032f2c1c64352b5423f6b48a8ebdc339cc63064af34d66a6c9aa79759e202"
+                 }
+            ]
+        },
+        {
+            "name": "libSM",
+            "config-opts": [ "--disable-static", "--with-libuuid" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/libSM-1.2.2.tar.bz2",
+                     "sha256": "0baca8c9f5d934450a70896c4ad38d06475521255ca63b717a6510fdb6e287bd"
+                 }
+            ]
+        },
+        {
+            "name": "libXt",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/libXt-1.1.5.tar.bz2",
+                     "sha256": "46eeb6be780211fdd98c5109286618f6707712235fdd19df4ce1e6954f349f1a"
+                 }
+            ]
+        },
+        {
+            "name": "libvdpau",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://cgit.freedesktop.org/~aplattner/libvdpau/snapshot/libvdpau-1.1.1.tar.bz2",
+                     "sha256": "e0d3840e2d2bda66f8fa953e9cb3d0d1925d42616cad90d73a64cf8ec6227bfa"
+                 }
+            ]
+        },
+        {
+            "name": "libpciaccess",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/libpciaccess-0.13.5.tar.bz2",
+                     "sha256": "752c54e9b3c311b4347cb50aea8566fa48eab274346ea8a06f7f15de3240b999"
+                 }
+            ]
+        },
+        {
+            "name": "libdrm",
+            "config-opts": [ "--disable-static", "--disable-udev" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "https://dri.freedesktop.org/libdrm/libdrm-2.4.91.tar.gz",
+                     "sha256": "c8ea3343d5bfc356550f0b5632403359d050fa09cf05d61e96e73adba0c407a9"
+                 }
+            ]
+        },
+        {
+            "name": "libXxf86vm",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/libXxf86vm-1.1.4.tar.bz2",
+                     "sha256": "afee27f93c5f31c0ad582852c0fb36d50e4de7cd585fcf655e278a633d85cd57"
+                 }
+            ]
+        },
+        {
+            "name": "libxshmfence",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/libxshmfence-1.2.tar.bz2",
+                     "sha256": "d21b2d1fd78c1efbe1f2c16dae1cb23f8fd231dcf891465b8debe636a9054b0c"
+                 }
+            ]
+        },
+        {
+            "name": "libXpm",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/libXpm-3.5.12.tar.bz2",
+                     "sha256": "fd6a6de3da48de8d1bb738ab6be4ad67f7cb0986c39bd3f7d51dd24f7854bdec"
+                 }
+            ]
+        },
+        {
+            "name": "libXrender",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/libXrender-0.9.10.tar.bz2",
+                     "sha256": "c06d5979f86e64cabbde57c223938db0b939dff49fdb5a793a1d3d0396650949"
+                 }
+            ]
+        },
+        {
+            "name": "libXScrnSaver",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/libXScrnSaver-1.2.2.tar.bz2",
+                     "sha256": "8ff1efa7341c7f34bcf9b17c89648d6325ddaae22e3904e091794e0b4426ce1d"
+                 },
+                 {
+                     "type": "shell",
+                     "commands": [
+			 "cp /usr/share/gnu-config/config.sub .",
+			 "cp /usr/share/gnu-config/config.guess ."
+		     ]
+                 }
+            ]
+        },
+        {
+            "name": "libXcursor",
+            "config-opts": [ "--disable-static",
+                             "--with-cursorpath=~/.icons:/app/share/icons:${datadir}/icons:${datadir}/pixmaps:/usr/share/runtime/share/icons:/run/host/share/icons" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/libXcursor-1.1.14.tar.bz2",
+                     "sha256": "9bc6acb21ca14da51bda5bc912c8955bc6e5e433f0ab00c5e8bef842596c33df"
+                 }
+            ]
+        },
+        {
+            "name": "libXinerama",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/libXinerama-1.1.3.tar.bz2",
+                     "sha256": "7a45699f1773095a3f821e491cbd5e10c887c5a5fce5d8d3fced15c2ff7698e2"
+                 }
+            ]
+        },
+        {
+            "name": "libXrandr",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/libXrandr-1.5.1.tar.bz2",
+                     "sha256": "1ff9e7fa0e4adea912b16a5f0cfa7c1d35b0dcda0e216831f7715c8a3abcf51a"
+                 }
+            ]
+        },
+        {
+            "name": "libXcomposite",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/libXcomposite-0.4.4.tar.bz2",
+                     "sha256": "ede250cd207d8bee4a338265c3007d7a68d5aca791b6ac41af18e9a2aeb34178"
+                 },
+                 {
+                     "type": "shell",
+                     "commands": [
+			 "rm -f config.sub config.guess",
+			 "cp /usr/share/gnu-config/config.sub .",
+			 "cp /usr/share/gnu-config/config.guess ."
+		     ]
+                 }
+            ]
+        },
+        {
+            "name": "xcb-util",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xcb.freedesktop.org/dist/xcb-util-0.4.0.tar.bz2",
+                     "sha256": "46e49469cb3b594af1d33176cd7565def2be3fa8be4371d62271fabb5eae50e9"
+                 }
+            ]
+        },
+        {
+            "name": "xcb-util-image",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xcb.freedesktop.org/dist/xcb-util-image-0.4.0.tar.bz2",
+                     "sha256": "2db96a37d78831d643538dd1b595d7d712e04bdccf8896a5e18ce0f398ea2ffc"
+                 }
+            ]
+        },
+        {
+            "name": "xcb-util-renderutil",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xcb.freedesktop.org/dist/xcb-util-renderutil-0.3.9.tar.bz2",
+                     "sha256": "c6e97e48fb1286d6394dddb1c1732f00227c70bd1bedb7d1acabefdd340bea5b"
+                 }
+            ]
+        },
+        {
+            "name": "xcb-util-cursor",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xcb.freedesktop.org/dist/xcb-util-cursor-0.1.3.tar.bz2",
+                     "sha256": "05a10a0706a1a789a078be297b5fb663f66a71fb7f7f1b99658264c35926394f"
+                 }
+            ]
+        },
+        {
+            "name": "xcb-util-keysyms",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xcb.freedesktop.org/dist/xcb-util-keysyms-0.4.0.tar.bz2",
+                     "sha256": "0ef8490ff1dede52b7de533158547f8b454b241aa3e4dcca369507f66f216dd9"
+                 }
+            ]
+        },
+        {
+            "name": "xcb-util-wm",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xcb.freedesktop.org/dist/xcb-util-wm-0.4.1.tar.bz2",
+                     "sha256": "28bf8179640eaa89276d2b0f1ce4285103d136be6c98262b6151aaee1d3c2a3f"
+                 }
+            ]
+        },
+        {
+            /* This is to bootstrap the harfbuzz build, it will be rebuilt later again */
+            "name": "freetype-bootstrap",
+            "config-opts": [ "--disable-static", "--with-zlib=yes", "--with-bzip2=yes", "--with-png=yes", "--with-harfbuzz=no" ],
+            "cleanup-platform": [ "/bin/freetype-config" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://download.savannah.gnu.org/releases/freetype/freetype-2.9.tar.bz2",
+                     "sha256": "e6ffba3c8cef93f557d1f767d7bc3dee860ac7a3aaff588a521e081bc36f4c8a"
+                 }
+            ]
+        },
+        {
+            "name": "itstool",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://files.itstool.org/itstool/itstool-2.0.2.tar.bz2",
+                     "sha256": "bf909fb59b11a646681a8534d5700fec99be83bb2c57badf8c1844512227033a"
+                 }
+            ]
+        },
+        {
+            "name": "fontconfig",
+            "config-opts": [ "--disable-static"],
+            "post-install": [ "install -m 0644 -p -T fontconfig-flatpak.conf /etc/fonts/conf.d/50-flatpak.conf"],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.13.0.tar.bz2",
+                     "sha256": "91dde8492155b7f34bb95079e79be92f1df353fcc682c19be90762fd3e12eeb9"
+                 },
+                 {
+                     "type": "file",
+                     "path": "fontconfig-flatpak.conf"
+                 }
+            ]
+        },
+        {
+            "name": "libXft",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/libXft-2.3.2.tar.bz2",
+                     "sha256": "f5a3c824761df351ca91827ac221090943ef28b248573486050de89f4bfcdc4c"
+                 }
+            ]
+        },
+        {
+            "name": "glib2",
+            "config-opts": ["--with-pcre=system" ],
+            "cleanup-platform": [ "/share/glib-2.0/codegen",
+                                  "/bin/gdbus-codegen",
+                                  "/bin/glib-*",
+                                  "/bin/gobject-query",
+                                  "/bin/gresource",
+                                  "/bin/gtester*"
+                               ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.gnome.org/sources/glib/2.52/glib-2.52.3.tar.xz",
+                    "sha256": "25ee7635a7c0fcd4ec91cbc3ae07c7f8f5ce621d8183511f414ded09e7e4e128"
+                 }
+            ]
+        },
+        {
+            "name": "dconf",
+            "config-opts": ["--disable-static", "--disable-man"],
+            "cleanup": [ "/libexec/dconf-service", "/share/dbus-1/services/*" ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.gnome.org/sources/dconf/0.26/dconf-0.26.1.tar.xz",
+                    "sha256": "d583b1f7fc93b879e2956acc6a26ea05a445a0002158aeef80c8e378e1414535"
+                },
+                {
+                    "type": "patch",
+                    "path": "dconf-override.patch"
+                }
+            ]
+        },
+        {
+            /* This is needed for gtk+ on wayland */
+            "name": "gsettings-desktop-schemas",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.gnome.org/sources/gsettings-desktop-schemas/3.28/gsettings-desktop-schemas-3.28.0.tar.xz",
+                    "sha256": "4cb4cd7790b77e5542ec75275237613ad22f3a1f2f41903a298cf6cc996a9167"
+                }
+            ]
+        },
+
+        {
+            "name": "xkeyboard-config",
+            "config-opts": [ "--enable-compat-rules", "--with-xkb-base=/usr/share/X11/xkb", "--with-xkb-rules-symlink=xorg"],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/data/xkeyboard-config/xkeyboard-config-2.20.tar.bz2",
+                     "sha256": "d1bfc72553c4e3ef1cd6f13eec0488cf940498b612ab8a0b362e7090c94bc134"
+                 }
+            ]
+        },
+        {
+            "name": "libxkbcommon",
+            "config-opts": [ "--disable-static", "--enable-x11" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xkbcommon.org/download/libxkbcommon-0.7.1.tar.xz",
+                     "sha256": "ba59305d2e19e47c27ea065c2e0df96ebac6a3c6e97e28ae5620073b6084e68b"
+                 }
+            ]
+        },
+        {
+            "name": "llvm",
+            "buildsystem": "cmake-ninja",
+            "builddir": true,
+            "cleanup-platform": ["/bin/llvm-*"],
+            "build-options" : {
+                "env": {
+                    /* Override global values */
+                    "CFLAGS": "",
+                    "CXXFLAGS": "",
+                    "LDFLAGS": ""
+                },
+                "arch" : {
+                    "i386" : {
+                        "config-opts" : [
+                            "-DLLVM_TARGETS_TO_BUILD=X86;AMDGPU;NVPTX;BPF"
+                        ]
+                    },
+                    "x86_64" : {
+                        "config-opts" : [
+                            "-DLLVM_TARGETS_TO_BUILD=X86;AMDGPU;NVPTX;BPF"
+                        ]
+                    },
+                    "arm" : {
+                        "config-opts" : [
+                            "-DLLVM_TARGETS_TO_BUILD=ARM;AMDGPU;NVPTX;BPF"
+                        ]
+                    },
+                    "aarch64" : {
+                        "config-opts" : [
+                            "-DLLVM_TARGETS_TO_BUILD=AArch64;AMDGPU;NVPTX;BPF"
+                        ]
+                    }
+                }
+            },
+            "config-opts": [
+                "-DBUILD_SHARED_LIBS:BOOL=ON",
+                "-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON",
+                "-DCMAKE_BUILD_TYPE=MinSizeRel",
+                "-DLLVM_LIBDIR_SUFFIX=",
+                "-DLLVM_ENABLE_LIBCXX:BOOL=OFF",
+                "-DLLVM_ENABLE_ZLIB:BOOL=ON",
+                "-DLLVM_ENABLE_FFI:BOOL=ON",
+                "-DLLVM_ENABLE_RTTI:BOOL=ON",
+                "-DLLVM_BUILD_RUNTIME:BOOL=ON",
+                "-DLLVM_INCLUDE_TOOLS:BOOL=ON",
+                "-DLLVM_BUILD_TOOLS:BOOL=ON",
+                "-DLLVM_INCLUDE_TESTS:BOOL=OFF",
+                "-DLLVM_BUILD_TESTS:BOOL=OFF",
+                "-DLLVM_INCLUDE_EXAMPLES:BOOL=OFF",
+                "-DLLVM_BUILD_EXAMPLES:BOOL=OFF",
+                "-DLLVM_INCLUDE_UTILS:BOOL=ON",
+                "-DLLVM_INSTALL_UTILS:BOOL=OFF",
+                "-DLLVM_INCLUDE_DOCS:BOOL=OFF",
+                "-DLLVM_BUILD_DOCS:BOOL=OFF",
+                "-DLLVM_ENABLE_SPHINX:BOOL=OFF",
+                "-DLLVM_ENABLE_DOXYGEN:BOOL=OFF",
+                "-DLLVM_BUILD_LLVM_DYLIB:BOOL=OFF",
+                "-DLLVM_BUILD_EXTERNAL_COMPILER_RT:BOOL=ON",
+                "-DFFI_INCLUDE_DIR=/usr/lib/libffi-3.2.1/include",
+                "-DLLVM_INSTALL_TOOLCHAIN_ONLY:BOOL=OFF"],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "http://llvm.org/releases/4.0.1/llvm-4.0.1.src.tar.xz",
+                    "sha256": "da783db1f82d516791179fe103c71706046561f7972b18f0049242dee6712b51"
+                }
+            ]
+        },
+        {
+            "name": "clang",
+            "buildsystem": "cmake-ninja",
+            "builddir": true,
+            "build-options" : {
+                "env": {
+                    /* Override global values */
+                    "CFLAGS": "",
+                    "CXXFLAGS": "",
+                    "LDFLAGS": ""
+                }
+            },
+            "config-opts": [
+                "-DBUILD_SHARED_LIBS:BOOL=ON",
+                "-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON",
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DLLVM_CONFIG:FILEPATH=/usr/bin/llvm-config",
+                "-DCLANG_ENABLE_ARCMT:BOOL=ON",
+                "-DCLANG_ENABLE_STATIC_ANALYZER:BOOL=ON",
+                "-DCLANG_INCLUDE_DOCS:BOOL=OFF",
+                "-DCLANG_INCLUDE_TESTS:BOOL=OFF",
+                "-DCLANG_PLUGIN_SUPPORT:BOOL=ON",
+                "-DCLANG_BUILD_EXAMPLES:BOOL=OFF"],
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "http://llvm.org/releases/4.0.1/cfe-4.0.1.src.tar.xz",
+                    "sha256": "61738a735852c23c3bdbe52d035488cdb2083013f384d67c1ba36fabebd8769b"
+                },
+                {
+                    "type": "patch",
+                    "path": "clang-detect-arches.patch"
+                }
+            ]
+        },
+        {
+            "name": "llvm6libs",
+            "buildsystem": "cmake-ninja",
+            "builddir": true,
+            "cleanup": ["/lib/llvm6"],
+            "build-options" : {
+                "env": {
+                    /* Override global values */
+                    "CFLAGS": "",
+                    "CXXFLAGS": "",
+                    "LDFLAGS": ""
+                },
+                "prefix": "/usr/lib/llvm6",
+                "arch" : {
+                    "i386" : {
+                        "config-opts" : [
+                            "-DLLVM_TARGETS_TO_BUILD=X86;AMDGPU;NVPTX"
+                        ]
+                    },
+                    "x86_64" : {
+                        "config-opts" : [
+                            "-DLLVM_TARGETS_TO_BUILD=X86;AMDGPU;NVPTX"
+                        ]
+                    },
+                    "arm" : {
+                        "config-opts" : [
+                            "-DLLVM_TARGETS_TO_BUILD=ARM;AMDGPU;NVPTX"
+                        ]
+                    },
+                    "aarch64" : {
+                        "config-opts" : [
+                            "-DLLVM_TARGETS_TO_BUILD=AArch64;AMDGPU;NVPTX"
+                        ]
+                    }
+                }
+            },
+            "config-opts": [
+                "-DLLVM_ENABLE_ASSERTIONS:BOOL=OFF",
+                "-DBUILD_SHARED_LIBS:BOOL=OFF",
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DLLVM_LIBDIR_SUFFIX=",
+                "-DLLVM_ENABLE_LIBCXX:BOOL=OFF",
+                "-DLLVM_ENABLE_ZLIB:BOOL=ON",
+                "-DLLVM_ENABLE_FFI:BOOL=ON",
+                "-DLLVM_INCLUDE_TESTS:BOOL=OFF",
+                "-DLLVM_BUILD_TOOLS:BOOL=ON",
+                "-DLLVM_INCLUDE_EXAMPLES:BOOL=OFF",
+                "-DLLVM_INCLUDE_UTILS:BOOL=OFF",
+                "-DLLVM_INCLUDE_DOCS:BOOL=OFF",
+                "-DLLVM_ENABLE_DOXYGEN:BOOL=OFF",
+                "-DLLVM_BUILD_EXTERNAL_COMPILER_RT:BOOL=ON",
+                "-DFFI_INCLUDE_DIR=/usr/lib/libffi-3.2.1/include",
+                "-DLLVM_INSTALL_TOOLCHAIN_ONLY:BOOL=OFF"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "http://llvm.org/releases/6.0.0/llvm-6.0.0.src.tar.xz",
+                    "sha256": "1ff53c915b4e761ef400b803f07261ade637b0c269d99569f18040f3dcee4408"
+                }
+            ]
+        },
+        {
+            "name": "wayland",
+            "config-opts": ["--disable-static", "--disable-documentation"],
+            "cleanup-platform": [ "/bin/wayland-scanner" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "https://wayland.freedesktop.org/releases/wayland-1.15.0.tar.xz",
+                     "sha256": "eb3fbebb8559d56a80ad3753ec3db800f587329067962dbf65e14488b4b7aeb0"
+                 }
+            ]
+        },
+        {
+            "name": "wayland-protocols",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "https://wayland.freedesktop.org/releases/wayland-protocols-1.13.tar.xz",
+                     "sha256": "0758bc8008d5332f431b2a84fea7de64d971ce270ed208206a098ff2ebc68f38"
+                 }
+            ]
+        },
+        {
+            "name": "vulkan",
+            "buildsystem": "cmake",
+            "config-opts": [
+                "-DCMAKE_INSTALL_LIBDIR=lib",
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DCMAKE_SKIP_RPATH:BOOL=yes",
+                "-DBUILD_VKJSON=OFF",
+                "-DCMAKE_INSTALL_SYSCONFDIR:PATH=/etc",
+                "-DBUILD_WSI_MIR_SUPPORT=OFF",
+                "-DGLSLANG_SPIRV_INCLUDE_DIR=./",
+                "-DBUILD_TESTS=OFF",
+                "-DBUILD_DEMOS=OFF",
+                "-DBUILD_LAYERS=OFF"
+            ],
+            "post-install": [
+                "mkdir -p /usr/lib/GL/vulkan/icd.d",
+                "ln -s /usr/lib/GL/vulkan /usr/etc/vulkan",
+                "mkdir -p /usr/share/vulkan/icd.d"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/archive/sdk-1.1.73.0.tar.gz",
+                    "sha256": "ab6bd8162b246bc5d73dcfb3b69ed7a35b12b739735493f47304b0fc852463e1"
+                }
+            ]
+        },
+        {
+            "name": "opencl",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/OCL-dev/ocl-icd/archive/v2.2.12.tar.gz",
+                    "sha256": "17500e5788304eef5b52dbe784cec197bdae64e05eecf38317840d2d05484272"
+                },
+                {
+                    "type": "file",
+                    "url": "https://www.khronos.org/registry/OpenCL/api/2.1/cl.hpp",
+                    "sha256": "08034743b513512bb6ea3a1e9a59bdf1842d8199fccad73ac1b406a88d60f7e0",
+                    "dest-filename": "khronos-headers/CL/cl.hpp"
+                },
+                {
+                    "type": "file",
+                    "url": "https://github.com/KhronosGroup/OpenCL-CLHPP/releases/download/v2.0.10/cl2.hpp",
+                    "sha256": "7c5bce92a5c38480db1f8d929c965378c8448e956b1e3b41d49c57b3cc0398ec",
+                    "dest-filename": "khronos-headers/CL/cl2.hpp"
+                }
+            ],
+            "post-install": [
+                "cp -r khronos-headers/CL /usr/include",
+                "mkdir -p /usr/lib/GL/OpenCL/vendors",
+                "ln -s /usr/lib/GL/OpenCL /usr/etc/OpenCL"
+            ]
+        },
+        {
+            "name": "libglvnd",
+            "config-opts": [ "--disable-static", "--enable-asm", "--enable-tls" ],
+            "build-options" : {
+                "arch" : {
+                    "i386" : {
+                        "config-opts" : [
+                            "--build=i586-unknown-linux-gnu"
+                        ]
+                    },
+                    "arm" : {
+                        "config-opts" : [
+                            "--build=arm-unknown-linux-gnueabi"
+                        ]
+                    }
+                }
+            },
+            "post-install": [
+                "mkdir -p /usr/lib/GL/glvnd/egl_vendor.d",
+                "ln -s /usr/lib/GL/glvnd /usr/etc/glvnd",
+                "mkdir -p /usr/share/glvnd/egl_vendor.d"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://github.com/NVIDIA/libglvnd.git",
+                    "tag": "v1.0.0"
+                },
+                {
+                    "type": "patch",
+                    "path": "libglvnd-OpenGL-Statically-export-a-few-more-things.patch"
+                }
+            ]
+        },
+        {
+            "name": "libva",
+            "cleanup-platform": ["/bin"],
+
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "http://www.freedesktop.org/software/vaapi/releases/libva/libva-1.7.3.tar.bz2",
+                    "sha256": "22bc139498065a7950d966dbdb000cad04905cbd3dc8f3541f80d36c4670b9d9"
+                }
+            ]
+        },
+        {
+            "name": "mesa",
+            "build-options" : {
+                "cxxflags": "-fno-rtti -fno-exceptions",
+		"arch" : {
+		    "i386" : {
+			"config-opts" : [
+                            "--build=i586-unknown-linux-gnu",
+			    "--with-gallium-drivers=svga,swrast,radeonsi,nouveau,r600,r300,radeonsi,virgl",
+			    "--with-dri-drivers=swrast,nouveau,radeon,r200,i915,i965",
+			    "--with-vulkan-drivers=intel,radeon"
+			]
+		    },
+		    "x86_64" : {
+			"config-opts" : [
+			    "--with-gallium-drivers=svga,swrast,radeonsi,nouveau,r600,r300,radeonsi,virgl",
+			    "--with-dri-drivers=swrast,nouveau,radeon,r200,i915,i965",
+			    "--with-vulkan-drivers=intel,radeon"
+			]
+		    },
+		    "arm" : {
+			"config-opts" : [
+			    "--with-gallium-drivers=swrast,nouveau,freedreno,vc4",
+			    "--with-dri-drivers=swrast,nouveau,radeon,r200"
+			]
+		    },
+		    "aarch64" : {
+			"config-opts" : [
+			    "--with-gallium-drivers=swrast,nouveau,freedreno,vc4",
+			    "--with-dri-drivers=swrast,nouveau,radeon,r200"
+			]
+		    }
+		}
+            },
+            "config-opts": [
+                "--enable-libglvnd",
+                "--disable-selinux",
+                "--disable-osmesa",
+                "--with-dri-driverdir=/usr/lib/dri",
+                "--enable-egl",
+                "--disable-gles1",
+                "--enable-gles2",
+                "--enable-vdpau",
+                "--enable-va",
+                "--enable-xa",
+                "--disable-xvmc",
+                "--with-platforms=x11,drm,surfaceless,wayland",
+                "--enable-shared-glapi",
+                "--enable-gbm",
+                "--disable-opencl",
+                "--enable-glx-tls",
+                "--enable-texture-float=yes",
+                "--enable-llvm",
+                "--with-llvm-prefix=/usr/lib/llvm6",
+                "--disable-llvm-shared-libs",
+                "--enable-dri",
+                "--enable-sysfs"
+            ],
+            "make-args": [ "MKDEP=/bin/true"],
+            "post-install": [
+                /* Strip the dri drivers to avoid breaking the hardlinks when extracting debuginfo */
+                "for i in /usr/lib/vdpau/*.so.1.0.0 /usr/lib/dri/*.so; do cp $i $i.tmp; eu-strip $i.tmp; mv $i.tmp $i; done",
+                /* Set the default driver to mesa */
+                "ln -s libEGL_mesa.so /usr/lib/libEGL_indirect.so",
+                "ln -s libEGL_mesa.so.0 /usr/lib/libEGL_indirect.so.0",
+                "ln -s libGLX_mesa.so /usr/lib/libGLX_indirect.so",
+                "ln -s libGLX_mesa.so.0 /usr/lib/libGLX_indirect.so.0"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://mesa.freedesktop.org/archive/mesa-18.0.2.tar.xz",
+                    "sha256": "98fa159768482dc568b9f8bf0f36c7acb823fa47428ffd650b40784f16b9e7b3"
+                },
+                {
+                    "type": "patch",
+                    "path": "mesa-glvnd-fix-gl-dot-pc.patch"
+                },
+                {
+                    "type": "patch",
+                    "path": "mesa-17.2.2-dri-path.patch"
+                }
+            ]
+        },
+        {
+            "name": "libva-vdpau-driver",
+            "config-opts": ["--enable-glx"],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "http://www.freedesktop.org/software/vaapi/releases/libva-vdpau-driver/libva-vdpau-driver-0.7.4.tar.bz2",
+                    "sha256": "155c1982f0ac3f5435ba20b221bcaa11be212c37db548cd1f2a030ffa17e9bb9"
+                },
+                {
+                    "type": "patch",
+                    "path": "libva-vdpau-driver-0.7.4-glext-85.patch"
+                },
+                {
+                    "type": "patch",
+                    "path": "libva-vdpau-driver-0.7.4-drop-h264-api.patch"
+                },
+                {
+                    "type": "patch",
+                    "path": "libva-vdpau-driver-0.7.4-fix_type.patch"
+                }
+            ]
+        },
+        {
+            "name": "dbus",
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://dbus.freedesktop.org/releases/dbus/dbus-1.10.16.tar.gz",
+                     "sha256": "a7b0ba6ea3e8d0e08afec5e3030d0245614268276620c536726f8fa6e5c43388"
+                 }
+            ]
+        },
+        {
+            "name": "pulseaudio",
+            "config-opts": [
+                "--disable-static",
+                "--disable-rpath",
+                "--with-system-user=pulse",
+                "--with-system-group=pulse",
+                "--with-access-group=pulse-access",
+                "--disable-oss-output",
+                "--disable-jack",
+                "--disable-lirc",
+                "--disable-bluez4",
+                "--disable-bluez5",
+                "--disable-systemd"
+            ],
+            "cleanup": [ "/share/pulseaudio",
+                         "/bin/pulseaudio",
+                         "/bin/start-pulseaudio-x11",
+                         "/bin/pasuspender",
+                         "/lib/pulse-*/modules",
+                         "/etc/dbus-1/system.d",
+                         "/etc/pulse/daemon.conf",
+                         "/etc/pulse/*.pa"],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://www.freedesktop.org/software/pulseaudio/releases/pulseaudio-10.0.tar.xz",
+                     "sha256": "a3186824de9f0d2095ded5d0d0db0405dc73133983c2fbb37291547e37462f57"
+                 }
+            ]
+        },
+        {
+            "name": "alsa-lib",
+            "config-opts": [ "--disable-aload", "--disable-alisp", "--disable-old-symbols",
+                             "--with-pcm-plugins=hw ioplug extplug"],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://people.freedesktop.org/~alexl/alsa-lib-1.1.4.1.tar.bz2",
+                    "sha256": "91bb870c14d1c7c269213285eeed874fa3d28112077db061a3af8010d0885b76"
+                },
+                {
+                    "type": "script",
+                    "dest-filename": "autogen.sh",
+                    "commands": [ "autoreconf -i" ]
+                },
+                {
+                    "type": "patch",
+                    "path": "alsa-lib-plugin-path.patch"
+                }
+            ]
+        },
+        {
+            "name": "alsa-plugins",
+            "config-opts": [ "--disable-jack", "--enable-pulseaudio", "--disable-samplerate",
+                             "--disable-avcodec", "--with-speex=no"],
+            "post-install": [
+                "mv /usr/share/alsa/alsa.conf.d/99-pulseaudio-default.conf.example /usr/share/alsa/alsa.conf.d/99-pulseaudio-default.conf",
+                "ln -s ../pulseaudio /usr/lib/alsa-lib/pulseaudio",
+                "chrpath -r '$ORIGIN/pulseaudio' /usr/lib/alsa-lib/libasound_module_pcm_pulse.so"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://people.freedesktop.org/~alexl/alsa-plugins-1.1.4.tar.bz2",
+                    "sha256": "530d1c3bdaeb058f2a03607a33b9e16ee5369bfd30a96bc09bd2c69b4ddd1a8a"
+                },
+                {
+                    "type": "script",
+                    "dest-filename": "autogen.sh",
+                    "commands": [ "autoreconf -i" ]
+                }
+            ]
+        },
+        {
+            "name": "libepoxy",
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "https://github.com/anholt/libepoxy/releases/download/1.5.0/libepoxy-1.5.0.tar.xz",
+                     "sha256": "4c94995398a6ebf691600dda2e9685a0cac261414175c2adf4645cdfab42a5d5"
+                 }
+            ]
+        },
+        {
+            "name": "desktop-file-utils",
+            "cleanup-platform": [ "*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://www.freedesktop.org/software/desktop-file-utils/releases/desktop-file-utils-0.23.tar.xz",
+                     "sha256": "6c094031bdec46c9f621708f919084e1cb5294e2c5b1e4c883b3e70cb8903385"
+                 }
+            ]
+        },
+        {
+            "name": "shared-mime-info",
+            "cleanup-platform": [ "/bin/update-mime-database" ],
+            "no-parallel-make": true,
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://people.freedesktop.org/~hadess/shared-mime-info-1.8.tar.xz",
+                     "sha256": "2af55ef1a0319805b74ab40d331a3962c905477d76c086f49e34dc96363589e9"
+                 }
+            ]
+        },
+        {
+            "name": "hicolor-icon-theme",
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://icon-theme.freedesktop.org/releases/hicolor-icon-theme-0.15.tar.xz",
+                     "sha256": "9cc45ac3318c31212ea2d8cb99e64020732393ee7630fa6c1810af5f987033cc"
+                 }
+            ]
+        },
+        {
+            "name": "pixman",
+            "config-opts": ["--disable-static"],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://xorg.freedesktop.org/archive/individual/lib/pixman-0.34.0.tar.bz2",
+                     "sha256": "39ba3438f3d17c464b0cb8be006dacbca0ab5aee97ebde69fec7ecdbf85794a0"
+                 }
+            ]
+        },
+        {
+            "name": "openal",
+            "buildsystem": "cmake",
+            "cleanup": [ "/bin" ],
+            "config-opts": [
+                "-DCMAKE_INSTALL_LIBDIR=lib",
+                "-DCMAKE_BUILD_TYPE=Release"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "http://kcat.strangesoft.net/openal-releases/openal-soft-1.17.2.tar.bz2",
+                    "sha256": "a341f8542f1f0b8c65241a17da13d073f18ec06658e1a1606a8ecc8bbc2b3314"
+                },
+                {
+                    "type": "patch",
+                    "path": "openal-fpu-neon.patch"
+                }
+            ]
+        },
+        {
+            "name": "cairo",
+            "config-opts": ["--disable-static",
+                            "--enable-xlib",
+                            "--enable-ft",
+                            "--enable-svg",
+                            "--enable-ps",
+                            "--enable-pdf",
+                            "--enable-tee",
+                            "--enable-gobject"
+                           ],
+            "cleanup-platform": ["/bin"],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://cairographics.org/snapshots/cairo-1.15.10.tar.xz",
+                    "sha256": "62ca226134cf2f1fd114bea06f8b374eb37f35d8e22487eaa54d5e9428958392"
+                }
+            ]
+        },
+        {
+            "name": "graphite2",
+            "buildsystem": "cmake",
+            "config-opts": [
+                "-DCMAKE_C_FLAGS_RELEASE:STRING=-DNDEBUG",
+                "-DCMAKE_CXX_FLAGS_RELEASE:STRING=-DNDEBUG",
+                "-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON",
+                "-DCMAKE_INSTALL_PREFIX:PATH=/usr",
+                "-DINCLUDE_INSTALL_DIR:PATH=/usr/include",
+                "-DLIB_INSTALL_DIR:PATH=/usr/lib",
+                "-DSYSCONF_INSTALL_DIR:PATH=/etc",
+                "-DSHARE_INSTALL_PREFIX:PATH=/usr/share",
+                "-DBUILD_SHARED_LIBS:BOOL=ON",
+                "-DGRAPHITE2_COMPARE_RENDERER=OFF"
+            ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "https://downloads.sourceforge.net/project/silgraphite/graphite2/graphite2-1.3.10.tgz",
+                     "sha256": "90fde3b2f9ea95d68ffb19278d07d9b8a7efa5ba0e413bebcea802ce05cda1ae"
+                 }
+            ]
+        },
+        {
+            "name": "harfbuzz",
+            "config-opts": ["--disable-static",
+                            "--with-gobject",
+                            "--with-graphite2"
+                           ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://www.freedesktop.org/software/harfbuzz/release/harfbuzz-1.4.8.tar.bz2",
+                     "sha256": "ccec4930ff0bb2d0c40aee203075447954b64a8c2695202413cc5e428c907131"
+                 }
+            ]
+        },
+        {
+            /* Rebuild with harfbuzz support */
+            "name": "freetype",
+            "config-opts": [ "--disable-static", "--with-zlib=yes", "--with-bzip2=yes", "--with-png=yes", "--with-harfbuzz=yes" ],
+            "cleanup-platform": [ "/bin/freetype-config" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://download.savannah.gnu.org/releases/freetype/freetype-2.9.tar.bz2",
+                     "sha256": "e6ffba3c8cef93f557d1f767d7bc3dee860ac7a3aaff588a521e081bc36f4c8a"
+                 }
+            ]
+        },
+        {
+            "name": "libproxy",
+            "buildsystem": "cmake",
+            "config-opts": [
+                "-DCMAKE_C_FLAGS_RELEASE:STRING=-DNDEBUG",
+                "-DCMAKE_CXX_FLAGS_RELEASE:STRING=-DNDEBUG",
+                "-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON",
+                "-DCMAKE_INSTALL_PREFIX:PATH=/usr",
+                "-DINCLUDE_INSTALL_DIR:PATH=/usr/include",
+                "-DLIB_INSTALL_DIR:PATH=/usr/lib",
+                "-DSYSCONF_INSTALL_DIR:PATH=/etc",
+                "-DSHARE_INSTALL_PREFIX:PATH=/usr/share",
+                "-DBUILD_SHARED_LIBS:BOOL=ON",
+                "-DMODULE_INSTALL_DIR=/usr/lib/libproxy/0.4.11/modules",
+                "-DWITH_PERL=OFF",
+                "-DWITH_GNOME3=OFF"
+            ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "https://people.freedesktop.org/~alexl/libproxy-0.4.14.tar.xz",
+                     "sha256": "e25d046850346a505c0617646f1e68b660092efadf665548a89c280900262ea6"
+                 }
+            ]
+        },
+        {
+            "name": "gtk-doc",
+            "sources": [
+                 {
+                     "type": "shell",
+                     "commands": [
+                         "xmlcatalog --noout --create /etc/xml/catalog",
+                         "xmlcatalog --noout --add nextCatalog '' /etc/xml/docbook-xml.xml /etc/xml/catalog",
+                         "xmlcatalog --noout --add nextCatalog '' /etc/xml/docbook-xsl.xml /etc/xml/catalog"
+                     ]
+                 },
+                 {
+                     "type": "archive",
+                     "url": "https://download.gnome.org/sources/gtk-doc/1.25/gtk-doc-1.25.tar.xz",
+                     "sha256": "1ea46ed400e6501f975acaafea31479cea8f32f911dca4dff036f59e6464fd42"
+                 }
+            ]
+        },
+        {
+            "name": "gobject-introspection",
+            "config-opts": ["--disable-static" ],
+            "cleanup-platform": ["/lib/gobject-introspection/giscanner",
+                                 "/share/gobject-introspection/giscanner",
+                                 "/bin"],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "https://download.gnome.org/sources/gobject-introspection/1.52/gobject-introspection-1.52.1.tar.xz",
+                     "sha256": "2ed0c38d52fe1aa6fc4def0c868fe481cb87b532fc694756b26d6cfab29faff4"
+                 }
+            ]
+        },
+        {
+            "name": "glib-networking",
+            "config-opts": ["--disable-static", "--with-libproxy"],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "https://download.gnome.org/sources/glib-networking/2.50/glib-networking-2.50.0.tar.xz",
+                     "sha256": "3f1a442f3c2a734946983532ce59ed49120319fdb10c938447c373d5e5286bee"
+                 }
+            ]
+        },
+        {
+            "name": "libsoup",
+            "config-opts": ["--disable-static", "--disable-vala"],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.gnome.org/sources/libsoup/2.58/libsoup-2.58.2.tar.xz",
+                    "sha256": "442300ca1b1bf8a3bbf2f788203287ff862542d4fc048f19a92a068a27d17b72"
+                }
+            ]
+        },
+        {
+            "name": "gnu-free-fonts",
+            "no-autogen": true,
+            "make-args": ["NAME=gnu-free", "PRIO=69", "FAMILIES=sans serif mono"],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://ftp.gnu.org/gnu/freefont/freefont-ttf-20120503.zip",
+                     "sha256": "7c85baf1bf82a1a1845d1322112bc6ca982221b484e3b3925022e25b5cae89af"
+                 },
+                 {
+                     "type": "file",
+                     "path": "gnu-free-mono.conf"
+                 },
+                 {
+                     "type": "file",
+                     "path": "gnu-free-sans.conf"
+                 },
+                 {
+                     "type": "file",
+                     "path": "gnu-free-serif.conf"
+                 },
+                 {
+                     "type": "file",
+                     "path": "Makefile-fonts",
+                     "dest-filename": "Makefile"
+                 }
+            ]
+        },
+        {
+            "name": "dejavu-fonts",
+            "no-autogen": true,
+            "make-args": ["NAME=dejavu", "SRCPRIO=57", "PRIO=57", "FAMILIES=sans serif sans-mono", "EXTRA_CONFS=20-unhint-small-dejavu-sans.conf 20-unhint-small-dejavu-sans-mono.conf 20-unhint-small-dejavu-serif.conf", "TTFDIR=ttf/", "CONFDIR=fontconfig/"],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://sourceforge.net/projects/dejavu/files/dejavu/2.37/dejavu-fonts-ttf-2.37.tar.bz2",
+                     "sha256": "fa9ca4d13871dd122f61258a80d01751d603b4d3ee14095d65453b4e846e17d7"
+                 },
+                 {
+                     "type": "file",
+                     "path": "Makefile-fonts",
+                     "dest-filename": "Makefile"
+                 }
+            ]
+        },
+        {
+            "name": "liberation-fonts",
+            "no-autogen": true,
+            "make-args": ["NAME=liberation-fonts", "PRIO=59", "FAMILIES=sans serif mono narrow"],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://releases.pagure.org/liberation-fonts/liberation-fonts-ttf-2.00.1.tar.gz",
+                     "sha256": "7890278a6cd17873c57d9cd785c2d230d9abdea837e96516019c5885dd271504"
+                 },
+                 {
+                     "type": "file",
+                     "path": "liberation-fonts-mono.conf"
+                 },
+                 {
+                     "type": "file",
+                     "path": "liberation-fonts-sans.conf"
+                 },
+                 {
+                     "type": "file",
+                     "path": "liberation-fonts-serif.conf"
+                 },
+                 {
+                     "type": "file",
+                     "path": "liberation-fonts-narrow.conf"
+                 },
+                 {
+                     "type": "file",
+                     "path": "Makefile-fonts",
+                     "dest-filename": "Makefile"
+                 }
+            ]
+        },
+        {
+            "name": "google-crosextra-caladea-fonts",
+            "no-autogen": true,
+            "make-args": ["NAME=google-crosextra-caladea", "PRIO=62", "EXTRA_CONFS=30-0-google-crosextra-caladea.conf"],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://gsdview.appspot.com/chromeos-localmirror/distfiles/crosextrafonts-20130214.tar.gz",
+                     "sha256": "c48d1c2fd613c9c06c959c34da7b8388059e2408d2bb19845dc3ed35f76e4d09"
+                 },
+                 {
+                     "type": "file",
+                     "path": "30-0-google-crosextra-caladea.conf"
+                 },
+                 {
+                     "type": "file",
+                     "path": "google-crosextra-caladea.conf"
+                 },
+                 {
+                     "type": "file",
+                     "path": "Makefile-fonts",
+                     "dest-filename": "Makefile"
+                 }
+            ]
+        },
+        {
+            "name": "google-crosextra-carlito-fonts",
+            "no-autogen": true,
+            "make-args": ["NAME=google-crosextra-carlito", "PRIO=62", "EXTRA_CONFS=30-0-google-crosextra-carlito.conf"],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://gsdview.appspot.com/chromeos-localmirror/distfiles/crosextrafonts-carlito-20130920.tar.gz",
+                     "sha256": "4bd12b6cbc321c1cf16da76e2c585c925ce956a08067ae6f6c64eff6ccfdaf5a"
+                 },
+                 {
+                     "type": "file",
+                     "path": "30-0-google-crosextra-carlito.conf"
+                 },
+                 {
+                     "type": "file",
+                     "path": "google-crosextra-carlito.conf"
+                 },
+                 {
+                     "type": "file",
+                     "path": "Makefile-fonts",
+                     "dest-filename": "Makefile"
+                 }
+            ]
+        },
+        {
+            "name": "emoji-one-font",
+            "buildsystem": "simple",
+            "sources": [
+                 {
+                     "type": "file",
+                     /* This is the last version with a free license, do not update */
+                     "url": "https://github.com/emojione/emojione/raw/693a9705f60efd566e40a5c9ec00ca306c9bcbd0/extras/fonts/emojione-android.ttf",
+                     "sha256": "6b43a1425844274c6fab96a6e3dad3a903d6f541c43bcbb665a8e09c775aa66d"
+                 }
+            ],
+            "build-commands": [
+                "install -m 0755 -d /usr/share/fonts/eosrei-emojione",
+                "install -p -m 644 emojione-android.ttf  /usr/share/fonts/eosrei-emojione"
+            ]
+        },
+        {
+            "name": "gdk-pixbuf2",
+            "config-opts": ["--disable-static",
+                            "--without-x11",
+                            "--without-libjasper",
+                            "--with-included-loaders=png,jpeg" ],
+            "cleanup-platform": [ "/bin"],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "https://download.gnome.org/sources/gdk-pixbuf/2.36/gdk-pixbuf-2.36.9.tar.xz",
+                     "sha256": "8013b271ff1a691514b5bbc9b99f6ed456422d4da4a721a9db0b783abe8e740a"
+                 }
+            ]
+        },
+        {
+            "name": "libcroco",
+            "config-opts": ["--disable-static"],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.gnome.org/sources/libcroco/0.6/libcroco-0.6.12.tar.xz",
+                    "sha256": "ddc4b5546c9fb4280a5017e2707fbd4839034ed1aba5b7d4372212f34f84f860"
+                }
+            ]
+        },
+        {
+            "name": "libdatrie",
+            "config-opts": ["--disable-static"],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "http://linux.thai.net/pub/thailinux/software/libthai/libdatrie-0.2.9.tar.xz",
+                    "sha256": "d980713e7ad8e19cf3b54ee0173782b94332af8e7e4e936dde01d2cd72e1da1d"
+                }
+            ]
+        },
+        {
+            "name": "libthai",
+            "config-opts": ["--disable-static"],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "http://linux.thai.net/pub/thailinux/software/libthai/libthai-0.1.22.tar.xz",
+                    "sha256": "bdb291dcc3a6784e86b1b342ec75005e9ab487f8c1decc7c3e7d18d1bbc9b7b7"
+                }
+            ]
+        },
+        {
+            "name": "pango",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.gnome.org/sources/pango/1.40/pango-1.40.12.tar.xz",
+                    "sha256": "75f1a9a8e4e2b28cbc078b50c1fa927ee4ded994d1ade97c5603e2d1f3161cfc"
+                }
+            ]
+        },
+        {
+            "name": "atk",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.gnome.org/sources/atk/2.24/atk-2.24.0.tar.xz",
+                    "sha256": "bb2daa9a808c73a7a79d2983f333e0ba74be42fc51e3ba1faf2551a636487a49"
+                }
+            ]
+        },
+        {
+            "name": "at-spi2-core",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.gnome.org/sources/at-spi2-core/2.24/at-spi2-core-2.24.1.tar.xz",
+                    "sha256": "1e90d064b937aacfe79a96232ac7e63d28d716e85bd9ff4333f865305a959b5b"
+                },
+                {
+                    "type": "patch",
+                    "path": "at-spi2-core-address-env-var.patch"
+                }
+            ]
+        },
+        {
+            "name": "at-spi2-atk",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.gnome.org/sources/at-spi2-atk/2.24/at-spi2-atk-2.24.1.tar.xz",
+                    "sha256": "60dc90ac4f74b8ffe96a9363c25208a443b381bacecfefea6de549f20ed6957d"
+                }
+            ]
+        },
+        {
+            "name": "librsvg",
+            "config-opts": ["--disable-static"],
+            "ensure-writable": ["/lib/gdk-pixbuf-2.0/*/loaders.cache"],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.gnome.org/sources/librsvg/2.40/librsvg-2.40.18.tar.xz",
+                    "sha256": "bfc8c488c89c1e7212c478beb95c41b44701636125a3e6dab41187f1485b564c"
+                }
+            ]
+        },
+        {
+            "name": "gtk3",
+            "config-opts": [ "--enable-xkb",
+                             "--enable-xinerama",
+                             "--enable-xrandr",
+                             "--enable-xfixes",
+                             "--enable-xcomposite",
+                             "--enable-xdamage",
+                             "--enable-x11-backend",
+                             "--enable-wayland-backend" ],
+            "cleanup-platform": [
+                "/bin/gtk3-*",
+                "/bin/gtk-builder-tool",
+                "/bin/gtk-encode-symbolic-svg"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.gnome.org/sources/gtk+/3.22/gtk+-3.22.30.tar.xz",
+                    "sha256": "a1a4a5c12703d4e1ccda28333b87ff462741dc365131fbc94c218ae81d9a6567"
+                },
+                {
+                    "type": "shell",
+                    "commands": [
+                        "rm gtk/gtkmarshalers.c gtk/gtkmarshalers.h"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "SDL2",
+            "config-opts": ["--enable-sdl-dlopen",
+                            "--disable-arts",
+                            "--disable-esd",
+                            "--disable-nas",
+                            "--enable-pulseaudio",
+                            "--disable-alsa",
+                            "--disable-oss",
+                            "--disable-sndio",
+                            "--disable-libudev",
+                            "--enable-video-wayland",
+                            "--enable-wayland-shared=no"],
+            "cleanup-platform": ["/bin/sdl2-config"],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://www.libsdl.org/release/SDL2-2.0.7.tar.gz",
+                     "sha256": "ee35c74c4313e2eda104b14b1b86f7db84a04eeab9430d56e001cea268bf4d5e"
+                 }
+            ]
+        },
+        {
+            "name": "orc",
+            "config-opts": ["--disable-static"],
+            "cleanup-platform": [ "/bin" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://gstreamer.freedesktop.org/src/orc/orc-0.4.27.tar.xz",
+                     "sha256": "51e53e58fc8158e5986a1f1a49a6d970c5b16493841cf7b9de2c2bde7ce36b93"
+                 }
+            ]
+        },
+        {
+            "name": "mpg123",
+            "config-opts": [ "-with-default-audio=pulse", "--with-audio=pulse" ],
+            "cleanup": [ "/bin"],
+            "build-options" : {
+                "arch" : {
+                    "i386" : {
+                        "config-opts" : [
+                            "--build=i586-unknown-linux-gnu"
+                        ]
+                    },
+		    "arm" : {
+                        "config-opts" : [
+                            "--build=arm-unknown-linux-gnueabi"
+			]
+		    }
+                }
+            },
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "http://mpg123.org/download/mpg123-1.25.6.tar.bz2",
+                    "sha256": "0f0458c9b87799bc2c9bf9455279cc4d305e245db43b51a39ef27afe025c5a8e"
+                }
+            ]
+        },
+        {
+            "name": "ffmpeg",
+            "cleanup": ["/share/ffmpeg/examples"],
+            "config-opts": [
+                "--disable-debug",
+                "--disable-doc",
+                "--disable-static",
+                "--enable-gpl",
+                "--enable-optimizations",
+                "--enable-libvpx",
+                "--enable-shared",
+                "--disable-ffplay",
+                "--disable-ffprobe",
+                "--disable-ffserver",
+                "--disable-everything",
+                "--enable-gnutls",
+                "--enable-libfontconfig",
+                "--enable-libfreetype",
+                "--enable-libopus",
+                "--enable-libpulse",
+                "--enable-libspeex",
+                "--enable-libtheora",
+                "--enable-libvorbis",
+                "--enable-libvpx",
+                "--enable-libwebp",
+                "--enable-openal",
+                "--enable-opengl",
+                "--enable-sdl2",
+                "--enable-decoder=pcm_s16be,pcm_s24be,pcm_mulaw,pcm_alaw",
+                "--enable-decoder=pcm_u8,pcm_s16le,pcm_s24le,pcm_f32le",
+                "--enable-decoder=theora,vorbis,vp8,vp9,mp3,flac,webp",
+                "--enable-decoder=rawvideo,png,gif",
+                "--enable-parser=opus,vp3,vorbis,vp8,mpegaudio,flac",
+                "--enable-demuxer=ogg,matroska,wav,mp3,gif,flac",
+                "--enable-filter=crop,scale",
+                "--enable-protocol=file"
+            ],
+            "post-install": [ "chrpath -d /usr/bin/ffmpeg"],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://ffmpeg.org/releases/ffmpeg-3.4.1.tar.xz",
+                    "sha256": "5a77278a63741efa74e26bf197b9bb09ac6381b9757391b922407210f0f991c0"
+                }
+            ]
+        },
+        {
+            "name": "gstreamer",
+            "config-opts": ["--enable-debug", "--disable-examples" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "https://gstreamer.freedesktop.org/src/gstreamer/gstreamer-1.10.5.tar.xz",
+                     "sha256": "bc06243600817f637029da29d089d5908d1d266542f68bf6626a10c5f05f1f1d"
+                 }
+            ]
+        },
+        {
+            "name": "gstreamer-plugins-base",
+            "config-opts": ["--enable-experimental", "--enable-orc" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "https://gstreamer.freedesktop.org/src/gst-plugins-base/gst-plugins-base-1.10.5.tar.xz",
+                     "sha256": "1c401a79bd1e4521c6ef1b66579bddedd9136e164e54792aab4bfcf3485bf9a7"
+                 }
+            ]
+        },
+        {
+            "name": "gstreamer-plugins-good",
+            "build-options" : {
+                "arch" : {
+                    "i386" : {
+                        "config-opts" : [
+                            "--build=i586-unknown-linux-gnu"
+                        ]
+                    },
+		    "arm" : {
+                        "config-opts" : [
+                            "--build=arm-unknown-linux-gnueabi"
+			]
+		    }
+                }
+            },
+            "config-opts": ["--enable-experimental",
+                            "--enable-orc" ,
+                            "--disable-monoscope",
+                            "--disable-aalib",
+                            "--enable-cairo",
+                            "--disable-libcaca",
+                            "--disable-jack",
+                            "--with-default-visualizer=autoaudiosink" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://gstreamer.freedesktop.org/src/gst-plugins-good/gst-plugins-good-1.10.5.tar.xz",
+                     "sha256": "be053f6ed716eeb517cec148cec637cdce571c6e04d5c21409e2876fb76c7639"
+                 }
+            ]
+        },
+        {
+            "name": "gstreamer-libav",
+            "build-options" : {
+                "arch" : {
+                    "i386" : {
+                        "config-opts" : [
+                            "--build=i586-unknown-linux-gnu"
+                        ]
+                    },
+                    "arm" : {
+                        "config-opts" : [
+                            "--build=arm-unknown-linux-gnueabi"
+                        ]
+                    }
+                }
+            },
+            "config-opts": ["--with-system-libav" ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://gstreamer.freedesktop.org/src/gst-libav/gst-libav-1.10.5.tar.xz",
+                     "sha256": "e4d2f315f478d47281fbfdfbd590a63d23704ca37911d7142d5992616f4b28d3"
+                }
+            ]
+        },
+        {
+            "name": "gstreamer-plugins-bad",
+            "config-opts": ["--enable-experimental", "--enable-orc" ],
+            "build-options" : {
+                "arch" : {
+                    "i386" : {
+                        "config-opts" : [
+                            "--build=i586-unknown-linux-gnu"
+                        ]
+                    },
+		    "arm" : {
+                        "config-opts" : [
+                            "--build=arm-unknown-linux-gnueabi"
+			]
+		    }
+                }
+            },
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://gstreamer.freedesktop.org/src/gst-plugins-bad/gst-plugins-bad-1.10.5.tar.xz",
+                     "sha256": "c5806040bb83b43be86ce592e6a19c5d83d7776f7d9f434eb4b911c4efff3573"
+                 }
+            ]
+        },
+        {
+            "name": "gstreamer-plugins-ugly",
+            "config-opts": ["--disable-asfdemux", "--disable-dvdlpcmdec", "--disable-dvdsub",
+                            "--disable-xingmux", "--disable-realmedia"],
+            "build-options" : {
+                "arch" : {
+                    "i386" : {
+                        "config-opts" : [
+                            "--build=i586-unknown-linux-gnu"
+                        ]
+                    },
+		    "arm" : {
+                        "config-opts" : [
+                            "--build=arm-unknown-linux-gnueabi"
+			]
+		    }
+                }
+            },
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://gstreamer.freedesktop.org/src/gst-plugins-ugly/gst-plugins-ugly-1.10.5.tar.xz",
+                     "sha256": "d6edc046350809c967f5b058c5c2e534d99d1d69fe1b26acd849e87781a7d7fc"
+                 }
+            ]
+        },
+        {
+            "name": "json-glib",
+            "config-opts": [ "--disable-static"],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "https://download.gnome.org/sources/json-glib/1.2/json-glib-1.2.8.tar.xz",
+                     "sha256": "fd55a9037d39e7a10f0db64309f5f0265fa32ec962bf85066087b83a2807f40a"
+                 }
+            ]
+        },
+        {
+            "name": "gcab",
+            "config-opts": [ "--disable-static" ],
+            "sources": [
+                {
+                     "type": "archive",
+                    "url": "https://download.gnome.org/sources/gcab/0.7/gcab-0.7.tar.xz",
+                    "sha256": "a16e5ef88f1c547c6c8c05962f684ec127e078d302549f3dfd2291e167d4adef"
+                }
+            ]
+        },
+        {
+            "name": "libappstream-glib",
+            "buildsystem": "meson",
+            "cleanup": ["/share/installed-tests"],
+            "config-opts": [ "-Dfonts=false",
+                             "-Ddep11=false",
+                             "-Drpm=false",
+                             "-Dstemmer=false" ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://people.freedesktop.org/~hughsient/appstream-glib/releases/appstream-glib-0.7.8.tar.xz",
+                    "sha256": "eb0e2cfd5a6070615efea4c87b1fc539f4566085aa5f5b41945f679d9d61dd4c"
+                },
+                {
+                    /* This patch is already in appstream-glib master and can be removed once version is bumped. */
+                    "type": "patch",
+                    "path": "appstream-glib-version-order.patch"
+                }
+            ]
+        },
+        {
+            "name": "hunspell",
+            "config-opts": [ "--disable-static",
+                             "--with-readline",
+                             "--with-ui" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://downloads.sourceforge.net/hunspell/hunspell-1.3.3.tar.gz",
+                     "sha256": "a7b2c0de0e2ce17426821dc1ac8eb115029959b3ada9d80a81739fa19373246c"
+                 }
+            ]
+        },
+        {
+            "name": "aspell",
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://ftp.gnu.org/gnu/aspell/aspell-0.60.6.1.tar.gz",
+                     "sha256": "f52583a83a63633701c5f71db3dc40aab87b7f76b29723aeb27941eff42df6e1"
+                 },
+                 {
+                     "type": "shell",
+                     "commands": [
+			 "cp /usr/share/gnu-config/config.sub .",
+			 "cp /usr/share/gnu-config/config.guess ."
+		     ]
+                 }
+            ]
+        },
+        {
+            "name": "mythes",
+            "config-opts": ["--disable-static"],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "http://downloads.sourceforge.net/hunspell/mythes-1.2.4.tar.gz",
+                    "sha256": "1e81f395d8c851c3e4e75b568e20fa2fa549354e75ab397f9de4b0e0790a305f"
+                }
+            ]
+        },
+        {
+            "name": "hyphen",
+            "config-opts": ["--disable-static"],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "http://downloads.sourceforge.net/hunspell/hyphen-2.8.8.tar.gz",
+                    "sha256": "304636d4eccd81a14b6914d07b84c79ebb815288c76fe027b9ebff6ff24d5705"
+                }
+            ],
+            /* This is in the regular dictionaries */
+            "post-install": [ "rm /usr/share/hyphen/hyph_en_US.dic"]
+        },
+        {
+            "name": "xdg-user-dirs",
+            "config-opts": ["--disable-documentation"],
+            "make-args": ["SUBDIRS=po"],
+            "make-install-args": ["SUBDIRS=po"],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://user-dirs.freedesktop.org/releases/xdg-user-dirs-0.15.tar.gz",
+                     "sha256": "20b4a751f41d0554bce3e0ce5e8d934be98cc62d48f0b90a894c3e1916552786"
+                 }
+            ]
+        },
+        {
+            "name": "cups",
+            "cleanup-platform": [ "/bin/cups-config" ],
+            "config-opts": ["--disable-static",
+                            "--enable-debug",
+                            "--with-components=core",
+                            "--with-dbusdir=/etc/dbus-1",
+                            "--enable-avahi",
+                            "--disable-systemd",
+                            "--enable-threads",
+                            "--enable-gnutls",
+                            "--libdir=/usr/lib",
+                            "localedir=/usr/share/locale" ],
+            "post-install": [ "chmod u+w /usr/bin/ipptool /usr/lib/libcups.*" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://www.cups.org/software/2.1.0/cups-2.1.0-source.tar.bz2",
+                     "sha256": "ba0238418442b8d84e09a865d0df6a728a20399826c5b466b14b1e9ab8c6d2c9"
+                 }
+            ]
+        },
+        {
+            "name": "SDL2_image",
+            "config-opts": ["--disable-static",
+                            "--disable-jpg-shared",
+                            "--disable-png-shared",
+                            "--disable-tif-shared",
+                            "--disable-webp-shared" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://www.libsdl.org/projects/SDL_image/release/SDL2_image-2.0.1.tar.gz",
+                     "sha256": "3a3eafbceea5125c04be585373bfd8b3a18f259bd7eae3efc4e6d8e60e0d7f64"
+                 }
+            ]
+        },
+        {
+            "name": "SDL2_net",
+            "config-opts": ["--disable-static",
+                            "--disable-gui" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://www.libsdl.org/projects/SDL_net/release/SDL2_net-2.0.1.tar.gz",
+                     "sha256": "15ce8a7e5a23dafe8177c8df6e6c79b6749a03fff1e8196742d3571657609d21"
+                 }
+            ]
+        },
+        {
+            "name": "SDL2_ttf",
+            "config-opts": ["--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://www.libsdl.org/projects/SDL_ttf/release/SDL2_ttf-2.0.14.tar.gz",
+                     "sha256": "34db5e20bcf64e7071fe9ae25acaa7d72bdc4f11ab3ce59acc768ab62fe39276"
+                 }
+            ]
+        },
+        {
+            "name": "SDL2_mixer",
+            "config-opts": ["--disable-static" ],
+            "sources": [
+                 {
+                     "type": "archive",
+                     "url": "http://www.libsdl.org/projects/SDL_mixer/release/SDL2_mixer-2.0.1.tar.gz",
+                     "sha256": "5a24f62a610249d744cbd8d28ee399d8905db7222bf3bdbc8a8b4a76e597695f"
+                 }
+            ]
+        },
+        {
+            "name": "geoclue2",
+            /* TODO: Use --disable-backend when supported (missing .pc file atm) */
+            "config-opts": ["--disable-3g-source", "--disable-cdma-source",
+                            "--disable-modem-gps-source", "--disable-nmea-source"],
+            "cleanup": [ "/share/applications",
+                         "/etc/dbus-1/system.d", "/libexec",
+                         "/share/dbus-1/system-services" ],
+            "cleanup-platform": [ "/share/dbus-1/interfaces" ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "http://www.freedesktop.org/software/geoclue/releases/2.4/geoclue-2.4.5.tar.xz",
+                    "sha256": "78162d33a2d42477ec241db7fc082439b0e0f9a791eb3a41e5a2aa1eae9145a1"
+                }
+            ]
+        },
+        {
+            "name": "libseccomp",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/seccomp/libseccomp/releases/download/v2.3.2/libseccomp-2.3.2.tar.gz",
+                    "sha256": "3ddc8c037956c0a5ac19664ece4194743f59e1ccd4adde848f4f0dae7f77bca1"
+                }
+            ]
+        },
+        {
+            "name": "pcre2",
+            "config-opts": ["--enable-jit",
+                            "--enable-pcre2grep-jit",
+                            "--disable-bsr-anycrlf",
+                            "--disable-coverage",
+                            "--disable-ebcdic",
+                            "--disable-never-backslash-C",
+                            "--enable-newline-is-lf",
+                            "--enable-pcre2-8",
+                            "--enable-pcre2-16",
+                            "--enable-pcre2-32",
+                            "--disable-pcre2test-libedit",
+                            "--enable-pcre2test-libreadline",
+                            "--enable-pcre2grep-callout",
+                            "--disable-pcre2grep-libbz2",
+                            "--disable-pcre2grep-libz",
+                            "--disable-rebuild-chartables",
+                            "--enable-shared",
+                            "--enable-stack-for-recursion",
+                            "--disable-static",
+                            "--enable-unicode",
+                            "--disable-valgrind"],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://ftp.pcre.org/pub/pcre/pcre2-10.23.tar.gz",
+                    "sha256": "bd62f955146a41815d6e2ce011bb75740825c32906b06e377f478599f54ee0dd"
+                }
+            ]
+        },
+        {
+            "name": "zenity",
+            "cleanup": [ "/share/help" ],
+            "config-opts": ["--disable-webkitgtk" ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.gnome.org/sources/zenity/3.26/zenity-3.26.0.tar.xz",
+                    "sha256": "6a7f34626dd62b751fe22bcdb32f3558f8a8fdddcc9406893dd264f0ac18e830"
+                }
+            ]
+        },
+        {
+            "name": "sound-theme-freedesktop",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://people.freedesktop.org/~mccann/dist/sound-theme-freedesktop-0.8.tar.bz2",
+                    "sha256": "cb518b20eef05ec2e82dda1fa89a292c1760dc023aba91b8aa69bafac85e8a14"
+                }
+            ]
+        },
+        {
+            "name": "flatpak-xdg-utils",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://github.com/flatpak/flatpak-xdg-utils.git",
+                    "branch": "c2266e2bce9d8f72e3f705e04719c7d9a924fd87"
+                }
+            ]
+        },
+        {
+            "name": "lib32-i386-symlink",
+            "only-arches": ["x86_64"],
+            "sources": [
+                {
+                    "type": "shell",
+                    "commands": [
+                        "mkdir -p /usr/lib/extra-links",
+                        "ln -s /app/lib/ld-linux.so.2 /usr/lib/extra-links/ld-linux.so.2"
+                    ]
+                }
+            ],
+            "buildsystem": "simple",
+            "build-commands": []
+        },
+        {
+            "name": "lib32-arm-symlink",
+            "only-arches": ["aarch64"],
+            "sources": [
+                {
+                    "type": "shell",
+                    "commands": [
+                        "mkdir -p /usr/lib/extra-links",
+                        "ln -s /app/lib/ld-linux-armhf.so.3 /usr/lib/extra-links/ld-linux-armhf.so.3"
+                    ]
+                }
+            ],
+            "buildsystem": "simple",
+            "build-commands": []
+        },
+        {
+            "name": "intel-vaapi-driver-stub",
+            "sources": [
+                {
+                    "type": "shell",
+                    "commands": [
+                        "mkdir -p /usr/lib/dri/intel-vaapi-driver",
+                        "ln -s /usr/lib/dri/intel-vaapi-driver/i965_drv_video.so /usr/lib/dri/i965_drv_video.so"
+                    ]
+                }
+            ],
+            "buildsystem": "simple",
+            "build-commands": []
+        },
+        {
+            "name": "ibus",
+            "config-opts": ["--disable-xim", "--disable-static", "--disable-dconf", "--disable-schemas-compile", "--disable-gtk2",
+                            "--disable-setup", "--disable-ui", "--disable-engine", "--disable-libnotify", "--disable-emoji-dict",
+                            "--disable-appindicator", "--disable-tests"],
+            "cleanup": [
+                "/bin", "/libexec", "/share/bash-completion", "/share/dbus-1",
+                "/share/icons", "/share/man", "/share/ibus" ],
+            "post-install": [ "gtk-query-immodules-3.0 --update-cache" ],
+
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/ibus/ibus/releases/download/1.5.16/ibus-1.5.16.tar.gz",
+                    "sha256": "36b57bfbe4f92e3281fb535cae65794b6f25164b2a3288e73e6d06b4a409fe1e"
+                },
+                {
+                    "type": "patch",
+                    "path": "ibus-portal.patch"
+                }
+            ]
+        },
+        {
+            "name": "extra-cmake-modules",
+            "cleanup-platform": ["*"],
+            "config-opts": ["-DENABLE_TESTING=OFF", "-DCMAKE_INSTALL_LIBDIR=lib"],
+            "buildsystem": "cmake",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.kde.org/stable/frameworks/5.39/extra-cmake-modules-5.39.0.tar.xz",
+                    "sha256": "b80536d7bed8c12fc492857d3d433b3859462402fe231e463efcd3bf44ffbcd1"
+                }
+            ]
+        },
+        {
+            "name": "fcitx",
+            "config-opts": ["-DENABLE_QT=Off", "-DENABLE_PINYIN=Off", "-DENABLE_TABLE=Off", "-DENABLE_GIR=Off", "-DENABLE_GTK3_IM_MODULE=On",
+                            "-DENABLE_OPENCC=Off", "-DENABLE_CAIRO=Off", "-DENABLE_SPELL=Off", "-DENABLE_GTK2_IM_MODULE=Off", "-DENABLE_LIBXML2=Off",
+                            "-DENABLE_X11=Off", "-DENABLE_ENCHANT=Off", "-DENABLE_PRESAGE=Off"],
+            "cleanup": ["/lib/fcitx", "/share", "/bin"],
+            "post-install": [ "gtk-query-immodules-3.0 --update-cache" ],
+            "buildsystem": "cmake",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://people.freedesktop.org/~alexl/fcitx-4.2.9.5.tar.xz",
+                    "sha256": "9479cef9b66e53df0e874637d55759ec08a195cb8790513e133135d8e49ad911"
+                }
+            ]
+        },
+        {
+            "name": "jq",
+            "cleanup-platform": ["*"],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/stedolan/jq/releases/download/jq-1.5/jq-1.5.tar.gz",
+                    "sha256": "c4d2bfec6436341113419debf479d833692cc5cdab7eb0326b5a4d4fbe9f493c"
+                }
+            ]
+        },
+        {
+            "name": "mercurial",
+            "cleanup-platform": ["*"],
+            "no-autogen": true,
+            "make-args": ["build"],
+            "install-rule": "install-bin",
+            "make-install-args": ["PREFIX=/usr"],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://www.mercurial-scm.org/release/mercurial-4.4.2.tar.gz",
+                    "sha256": "dc2f72caccd6b760226753d48c2f4e8889fe176a6b23ef50775caac55ce28b85"
+                }
+            ]
+        },
+        {
+            "name": "rr",
+            "cleanup-platform": ["*"],
+            "buildsystem": "cmake-ninja",
+            "only-arches": ["i386", "x86_64"],
+            "build-options": {
+                "arch": {
+                    "i386": {
+                        "config-opts": ["-Dforce32bit=ON"]
+                    },
+                    "x86_64": {
+                        "config-opts": ["-Ddisable32bit=ON"]
+                    }
+                }
+            },
+            "modules": [
+                {
+                    "name": "capnproto",
+                    "cleanup-platform": ["*"],
+                    "sources": [
+                        {
+                            "type": "archive",
+                            "url": "https://capnproto.org/capnproto-c++-0.6.1.tar.gz",
+                            "sha256": "8082040cd8c3b93c0e4fc72f2799990c72fdcf21c2b5ecdae6611482a14f1a04"
+                        }
+                    ]
+                },
+                {
+                    "name": "rr-python-dependencies",
+                    "cleanup-platform": ["*"],
+                    "buildsystem": "simple",
+                    "build-commands": [
+                        "pip2 install --no-index --find-links \"file://${PWD}\" ptyprocess pexpect"
+                    ],
+                    "sources": [
+                        {
+                            "type": "file",
+                            "url": "https://pypi.python.org/packages/14/05/47c8bca66390c9b18c91f6152db4b74eb850382e8e13aa2f06dfb3036466/pexpect-4.3.1.tar.gz",
+                            "sha256": "8e287b171dbaf249d0b06b5f2e88cb7e694651d2d0b8c15bccb83170d3c55575"
+                        },
+                        {
+                            "type": "file",
+                            "url": "https://pypi.python.org/packages/51/83/5d07dc35534640b06f9d9f1a1d2bc2513fb9cc7595a1b0e28ae5477056ce/ptyprocess-0.5.2.tar.gz",
+                            "sha256": "e64193f0047ad603b71f202332ab5527c5e52aa7c8b609704fc28c0dc20c4365"
+                        }
+                    ]
+                }
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://github.com/mozilla/rr",
+                    "branch": "5.1.0"
+                }
+            ]
+        },
+        {
+            "name": "dictionaries",
+            "buildsystem": "simple",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://github.com/LibreOffice/dictionaries.git",
+                    "branch": "libreoffice-5.4.1.1",
+                    "commit": "c0379d0ff639cf4a51244011a944f862703b92df"
+                },
+                {
+                    "type": "file",
+                    "path": "install-dicts.py"
+                },
+                {
+                    "type": "file",
+                    "path": "th_gen_idx.pl"
+                }
+            ],
+            "build-commands": [
+                "./install-dicts.py */dictionaries.xcu",
+                "ln -s /usr/share/hunspell /usr/share/myspell"
+            ]
+        },
+        {
+            "name": "os-release",
+            "post-install": [
+                "mkdir -p /usr/share/runtime/share/themes",
+                "mkdir -p /usr/share/runtime/share/icons",
+                "mkdir -p /usr/share/runtime/docs",
+                "mv /usr/share/man /usr/share/runtime/docs/",
+                "ln -s /usr/share/runtime/docs/man /usr/share/man",
+                "mkdir -p /usr/share/runtime/docs/gtk-doc",
+                "mv /usr/share/gtk-doc/html /usr/share/runtime/docs/gtk-doc/",
+                "ln -s /usr/share/runtime/docs/gtk-doc/html /usr/share/gtk-doc/html"
+            ],
+            "sources": [
+                {
+                    "type": "file",
+                    "path": "os-release"
+                },
+                {
+                    "type": "file",
+                    "path": "issue"
+                },
+                {
+                    "type": "file",
+                    "path": "issue.net"
+                },
+                {
+                    "type": "file",
+                    "path": "org.freedesktop.Sdk.appdata.xml"
+                },
+                {
+                    "type": "file",
+                    "path": "org.freedesktop.Platform.appdata.xml"
+                },
+                {
+                    "type": "file",
+                    "path": "os-release-configure",
+                    "dest-filename": "configure"
+                }
+            ]
+        },
+        {
+            "name": "freedesktop-post",
+            "buildsystem": "simple",
+            "build-commands": [
+                "cp freedesktop-post.sh /usr/libexec"
+            ],
+            "sources": [
+                {
+                    "type": "script",
+                    "dest-filename": "freedesktop-post.sh",
+                    "commands": [
+                        "echo running freedesktop-post.sh",
+                        "touch -d @0 /usr/share/fonts /usr/share/fonts/*",
+                        "fc-cache -rs",
+                        "ldconfig -C /usr/etc/ld.so.cache",
+                        "cp -d /usr/lib/extra-links/* /usr/lib/ || true"
+                    ]
+                }
+            ]
+        }
+    ]
+}
